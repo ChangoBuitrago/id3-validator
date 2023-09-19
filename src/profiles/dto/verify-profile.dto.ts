@@ -5,14 +5,14 @@ export class VerifyProfileDto {
   @IsString()
   @ApiProperty({
     description: 'The web3name for profile verification.',
-    example: 'micha',
+    example: 'buitrago',
   })
   readonly web3Name: string;
 
   @IsString()
   @ApiProperty({
     description: 'The username for profile verification.',
-    example: 'drgorb',
+    example: 'briefboards',
   })
   readonly username: string;
   

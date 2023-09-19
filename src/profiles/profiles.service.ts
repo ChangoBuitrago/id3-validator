@@ -84,27 +84,32 @@ export class ProfilesService implements OnModuleInit, OnModuleDestroy {
 
       // Filter the endpoints by KiltPublishedCredentialCollectionV1Type type.
       const credentialEndpoints: Kilt.DidServiceEndpoint[] = document.service?.filter((service) =>
-        service.type.includes("Email") // includes(Kilt.KiltPublishedCredentialCollectionV1Type)
+        service.type.includes(Kilt.KiltPublishedCredentialCollectionV1Type)
       );
       if (!credentialEndpoints || credentialEndpoints.length === 0) {
         throw new Error(`No ${platform} service endpoints found in the document`);
       }
       
       // Being an IPFS endpoint, the fetching can take an arbitrarily long time or even fail if the timeout is reached.
-      const response = await fetch(credentialEndpoints?.[0]?.serviceEndpoint[0])
-      if (!response.ok) {
-        throw new Error(`Failed to fetch credentials. Status code: ${response.status}`);
-      }
-      const credentials: Kilt.KiltPublishedCredentialV1[] = await response.json() as Kilt.KiltPublishedCredentialV1[]
+      const credentialPromises = credentialEndpoints.map(async endpoint => {
+        const response = await fetch(endpoint?.serviceEndpoint[0]);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch credentials for endpoint ${endpoint?.serviceEndpoint[0]}. Status code: ${response.status}`);
+        }
+        return await response.json() as Kilt.KiltPublishedCredentialV1;
+      });
+      const credentials = (await Promise.all(credentialPromises)).flat();
+
+      // console.log(JSON.stringify(credentials, null, 2))
 
       // Find a credential whose content matches the provided username
-      const credential = credentials.find(({ credential }) => credential.claim.contents.Email === username)
+      const credential = credentials.find(({ credential }) => credential.claim.contents.Twitter === username)
       if (!credential) {
-        throw new Error('No matching credential found for the provided username');
+        throw new Error(`No matching credential found for the provided ${username}`);
       }
       
       // Fetch cType details from the chain using the provided cTypeId
-      const cTypeId:`kilt:ctype:0x${string}` = this.configService.get<`kilt:ctype:0x${string}`>('EMAIL_CTYPE_ID')
+      const cTypeId:`kilt:ctype:0x${string}` = this.configService.get<`kilt:ctype:0x${string}`>('TWITTER_CTYPE_ID')
       const { cType }:Kilt.CType.ICTypeDetails = await Kilt.CType.fetchFromChain(cTypeId)
 
       // Create an array of trusted attester URIs with the provided 'trustedAttester'
