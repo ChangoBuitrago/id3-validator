@@ -21,5 +21,5 @@ export class VerifyProfileDto {
     description: 'The social media platform\'s name for profile verification.',
     example: 'twitter',
   })
-  readonly platform: string;
+  readonly platformName: string;
 }

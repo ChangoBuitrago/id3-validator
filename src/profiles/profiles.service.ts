@@ -200,13 +200,13 @@ export class ProfilesService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Verifies a user profile.
-   * @param {VerifyProfileDto} params - Object containing web3Name, username, and platform.
+   * @param {VerifyProfileDto} params - Object containing web3Name, username, and platformName.
    * @returns {Promise<Profile>} - A promise that resolves to the verified profile.
    */
-  async verifyProfile({ web3Name, username, platform }: VerifyProfileDto): Promise<Profile> {
+  async verifyProfile({ web3Name, username, platformName }: VerifyProfileDto): Promise<Profile> {
     try {
-      if (!web3Name || !username || !platform) {
-        throw new Error('Invalid parameters: web3Name, username, and platform are required.')
+      if (!web3Name || !username || !platformName) {
+        throw new Error('Invalid parameters: web3Name, username, and platformName are required.')
       }
 
       // Get trusted attester URIs
@@ -221,9 +221,9 @@ export class ProfilesService implements OnModuleInit, OnModuleDestroy {
       }
 
       // Check if the provided platform is supported
-      const matchingPlatform = supportedPlatforms.some(({ name }) => platform === name)
+      const matchingPlatform = supportedPlatforms.some(({ name }) => platformName === name)
       if (!matchingPlatform) {
-        throw new Error(`The provided platform (${platform}) is not supported.`)
+        throw new Error(`The provided platform (${platformName}) is not supported.`)
       }
 
       // Get the DidUri for the provided web3Name
@@ -260,14 +260,14 @@ export class ProfilesService implements OnModuleInit, OnModuleDestroy {
       const credentials = await this.fetchCredentials(firstEndpoint.serviceEndpoint[0])
 
       // Destructuring `cTypeHash` and `contentsKey` from matching platform
-      const { cTypeHash, contentsKey } = supportedPlatforms.find(({ name }) => name === platform)
-      // Find the matching credentials for the provided platform and username
+      const { cTypeHash, contentsKey } = supportedPlatforms.find(({ name }) => name === platformName)
+      // Find the matching credentials for the provided platformName and username
       const matchingCredential = credentials.find(({ credential }) => 
           credential.claim.cTypeHash === cTypeHash
             && (contentsKey in credential.claim.contents)
               && credential.claim.contents[contentsKey] === username)
       if (!matchingCredential) {
-        throw new Error(`No matching credential found for platform "${platform}" and username "${username}".`)
+        throw new Error(`No matching credential found for platformName "${platformName}" and username "${username}".`)
       }
 
       // Verify the matching credential first, before proceeding with the rest of the social credential list
