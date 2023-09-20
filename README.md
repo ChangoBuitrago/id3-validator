@@ -6,6 +6,9 @@
 yarn
 ```
 
+### Configuration:
+Before running the application, ensure that you create a `.env` file based on the provided `.env.example` file, and place it in the root of the project folder.
+
 ### Running:
 
 ```bash
