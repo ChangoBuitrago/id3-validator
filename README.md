@@ -1,15 +1,15 @@
 ## Social KYC Validator
 
-### Installation
+### Installation:
 
-```
+```bash
 yarn
 ```
 
-### Running
+### Running:
 
-```
+```bash
 yarn start
 ```
 
-Once the application is running you can visit [http://localhost:3000/api](http://localhost:3000/api) to see the Swagger interface.
+Once the application is running, you can visit [http://localhost:3000/api](http://localhost:3000/api) to access the Swagger interface.
