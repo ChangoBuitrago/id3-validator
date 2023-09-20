@@ -280,11 +280,14 @@ export class ProfilesService implements OnModuleInit, OnModuleDestroy {
       const credentials = await this.fetchCredentials(firstEndpoint.serviceEndpoint[0])
 
       // Find a matching platform credential for the provided username
-      const matchingCredential = credentials.some(({ credential }) => credential.claim.contents[this.capitalizeFirstLetter(platform)] === username.toLowerCase())
+      const matchingCredential = credentials.find(({ credential }) => credential.claim.contents[this.capitalizeFirstLetter(platform)] === username.toLowerCase())
       if (!matchingCredential) {
         throw new Error(`No matching credential found for ${this.capitalizeFirstLetter(platform)} platform`)
       }
 
+      // Verify the matching credential first, before proceeding with the rest of the social credential list
+      this.verifyCredential(matchingCredential, trustedAttesterUris, didUri)
+      
       // Filter credentials based on supported platforms
       const socialCredentials = credentials.filter(({credential}) =>
         supportedPlatforms.some(platform => this.capitalizeFirstLetter(platform) in credential.claim.contents)
