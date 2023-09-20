@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import fetch from 'node-fetch';
 import { VerifyProfileDto } from './dto/verify-profile.dto';
 import { Profile } from './entities/profile.entity';
+import { supportedPlatforms } from '../local/supportedPlatforms.json'
 
 /**
  * Service for managing user profiles and credentials.
@@ -16,7 +17,6 @@ import { Profile } from './entities/profile.entity';
  */
 @Injectable()
 export class ProfilesService implements OnModuleInit, OnModuleDestroy {
-
   /**
    * Constructor for ProfilesService.
    * @param configService - Instance of ConfigService for configuration.
@@ -49,15 +49,6 @@ export class ProfilesService implements OnModuleInit, OnModuleDestroy {
    */
   healthCheck(): boolean {
     return true;
-  }
-
-  /**
-   * Capitalizes the first letter of a string.
-   * @param input - The input string.
-   * @returns {string} - The input string with the first letter capitalized.
-   */
-  capitalizeFirstLetter(input: string){
-    return input.charAt(0).toUpperCase() + input.slice(1).toLowerCase();
   }
 
   /**
@@ -94,9 +85,9 @@ export class ProfilesService implements OnModuleInit, OnModuleDestroy {
   /**
    * Fetches credentials from an endpoint.
    * @param endpoint - The endpoint to fetch credentials from.
-   * @returns {Promise<Kilt.KiltPublishedCredentialV1[]>} - A promise that resolves to an array of credentials.
+   * @returns {Promise<Kilt.KiltPublishedCredentialCollectionV1>} - A promise that resolves to an array of credentials.
    */
-  async fetchCredentials(endpoint: string): Promise<Kilt.KiltPublishedCredentialV1[]> {
+  async fetchCredentials(endpoint: string): Promise<Kilt.KiltPublishedCredentialCollectionV1> {
     try {
       const response = await fetch(endpoint);
       if (!response.ok) {
@@ -106,7 +97,7 @@ export class ProfilesService implements OnModuleInit, OnModuleDestroy {
       if (!this.isPublishedCollection(jsonCollection)) {
         throw new Error(`Collection is not a valid KiltPublishedCredentialCollectionV1 type`);
       }
-      return jsonCollection as Kilt.KiltPublishedCredentialV1[];
+      return jsonCollection as Kilt.KiltPublishedCredentialCollectionV1;
     } catch (error) {
       throw new Error(`[${this.fetchCredentials.name}] - ${error.message}`);
     }
@@ -121,12 +112,17 @@ export class ProfilesService implements OnModuleInit, OnModuleDestroy {
    * @returns {Promise<Kilt.ICredential>} - A promise that resolves to the verified credential.
    */
   async verifyCredential(
-    { credential }: Kilt.KiltPublishedCredentialV1,
+    credentialV1: Kilt.KiltPublishedCredentialV1,
     trustedAttesterUris: Kilt.DidUri[] = [],
     didUri: Kilt.DidUri,
-    ctype?: Kilt.ICType
-  ): Promise<Kilt.ICredential> {
+  ): Promise<Kilt.KiltPublishedCredentialV1> {
     try {
+      // Extract credential from KiltPublishedCredentialV1 type
+      const { credential } = credentialV1
+
+      // Get cType registered on-chain
+      const { cType:ctype } = await Kilt.CType.fetchFromChain(`kilt:ctype:${credential.claim.cTypeHash}`)
+
       // Verifies the validity of the credential.
       const { revoked, attester } = await Kilt.Credential.verifyCredential(credential, { ctype });
 
@@ -144,7 +140,7 @@ export class ProfilesService implements OnModuleInit, OnModuleDestroy {
         throw new Error('Credential refers to a different subject than expected.');
       }
 
-      return credential;
+      return credentialV1;
     } catch (error) {
       throw new Error(`[${this.verifyCredential.name}] - ${error.message}`);
     }
@@ -158,15 +154,19 @@ export class ProfilesService implements OnModuleInit, OnModuleDestroy {
    * @returns {Promise<Kilt.ICredential[]>} - A promise that resolves to an array of verified credentials.
    */
   async verifySocialCredentials(
-    socialCredentials: Kilt.KiltPublishedCredentialV1[],
+    socialCredentials: Kilt.KiltPublishedCredentialCollectionV1,
     trustedAttesterUris: Kilt.DidUri[],
     didUri: Kilt.DidUri
-  ): Promise<Kilt.ICredential[]> {
+  ): Promise<Kilt.KiltPublishedCredentialCollectionV1> {
     // Verify a social credential using provided information
-    const verifiedCredentialsPromises = socialCredentials.map(async (credential) => {
+    const verifiedCredentialsPromises = socialCredentials.map(async (credentialV1) => {
       try {
         // Verify the credential
-        return this.verifyCredential(credential, trustedAttesterUris, didUri);
+        return this.verifyCredential(
+          credentialV1, 
+          trustedAttesterUris, 
+          didUri, 
+        );
       } catch (error) {
         return error; // Handle failed verification
       }
@@ -176,41 +176,23 @@ export class ProfilesService implements OnModuleInit, OnModuleDestroy {
 
     const successfulVerifications = verifiedCredentialsResults
       .filter(result => result.status === 'fulfilled')
-      .map(result => (result as PromiseFulfilledResult<Kilt.ICredential>).value);
+      .map(result => (result as PromiseFulfilledResult<Kilt.KiltPublishedCredentialV1>).value);
 
     return successfulVerifications;
   }
 
   /**
    * Extracts profile information from an array of credentials.
-   * @param credentials - Array of credentials.
+   * @param credentialsv1 - Array of KiltPublishedCredentialV1 credentials.
    * @returns {Profile} - The extracted profile.
    */
-  extractProfile(credentials: Kilt.ICredential[]): Profile {
+  extractProfile(credentialsV1: Kilt.KiltPublishedCredentialCollectionV1): Profile {
     const links: Record<string, string> = {};
 
-    credentials.forEach(credential => {
-      const { Email, Website, Twitter, Linkedin, Github } = credential.claim.contents;
+    credentialsV1.forEach(({ credential }) => {
+      const { name, contentsKey, linkTemplate} = supportedPlatforms.find(({ cTypeHash }) => credential.claim.cTypeHash === cTypeHash)
 
-      if (Email) {
-        links.email = Email as string;
-      }
-
-      if (Website) {
-        links.website = Website as string;
-      }
-
-      if (Twitter) {
-        links.twitter = `https://twitter.com/${Twitter}`;
-      }
-
-      if (Linkedin) {
-        links.linkedin = `https://linkedin.com/in/${Linkedin}`;
-      }
-
-      if (Github) {
-        links.github = `https://github.com/${Github}`;
-      }
+      links[name] = linkTemplate.replace("CONTENTS_VALUE", credential.claim.contents[contentsKey] as string)
     });
 
     return { links };
@@ -223,7 +205,6 @@ export class ProfilesService implements OnModuleInit, OnModuleDestroy {
    */
   async verifyProfile({ web3Name, username, platform }: VerifyProfileDto): Promise<Profile> {
     try {
-      
       if (!web3Name || !username || !platform) {
         throw new Error('Invalid parameters: web3Name, username, and platform are required.')
       }
@@ -234,14 +215,13 @@ export class ProfilesService implements OnModuleInit, OnModuleDestroy {
         throw new Error('No trusted attester URIs found')
       }
 
-      // Get supported platform list
-      const supportedPlatforms = this.configService.get<string>('SUPPORTED_PLATFORMS', '').split(',')
+      // Check if supported platform list is empty
       if (!supportedPlatforms.length) {
         throw new Error('No supported platform list found')
       }
 
       // Check if the provided platform is supported
-      const matchingPlatform = supportedPlatforms.some(name => platform.toLowerCase() === name.toLowerCase())
+      const matchingPlatform = supportedPlatforms.some(({ name }) => platform === name)
       if (!matchingPlatform) {
         throw new Error(`The provided platform (${platform}) is not supported.`)
       }
@@ -279,21 +259,26 @@ export class ProfilesService implements OnModuleInit, OnModuleDestroy {
       // Fetch credentials from the service endpoint
       const credentials = await this.fetchCredentials(firstEndpoint.serviceEndpoint[0])
 
-      // Find a matching platform credential for the provided username
-      const matchingCredential = credentials.find(({ credential }) => credential.claim.contents[this.capitalizeFirstLetter(platform)] === username.toLowerCase())
+      // Destructuring `cTypeHash` and `contentsKey` from matching platform
+      const { cTypeHash, contentsKey } = supportedPlatforms.find(({ name }) => name === platform)
+      // Find the matching credentials for the provided platform and username
+      const matchingCredential = credentials.find(({ credential }) => 
+          credential.claim.cTypeHash === cTypeHash
+            && (contentsKey in credential.claim.contents)
+              && credential.claim.contents[contentsKey] === username)
       if (!matchingCredential) {
-        throw new Error(`No matching credential found for ${this.capitalizeFirstLetter(platform)} platform`)
+        throw new Error(`No matching credential found for platform "${platform}" and username "${username}".`)
       }
 
       // Verify the matching credential first, before proceeding with the rest of the social credential list
       this.verifyCredential(matchingCredential, trustedAttesterUris, didUri)
       
-      // Filter credentials based on supported platforms
-      const socialCredentials = credentials.filter(({credential}) =>
-        supportedPlatforms.some(platform => this.capitalizeFirstLetter(platform) in credential.claim.contents)
+      // Filter credentials from KiltPublishedCredentialCollection based on supported CTypes
+      const socialCredentials = credentials.filter(({ credential }) =>
+        supportedPlatforms.some(({ cTypeHash }) => credential.claim.cTypeHash === cTypeHash)
       )
 
-      // Verify social credentials and get successful verifications
+      // Verify social credentials and get only successful verifications
       const successfulVerifications = await this.verifySocialCredentials(
         socialCredentials,
         trustedAttesterUris,
@@ -303,7 +288,6 @@ export class ProfilesService implements OnModuleInit, OnModuleDestroy {
       // Extract and return the profile from verified credentials
       const profile: Profile = this.extractProfile(successfulVerifications)
       return profile
-
 
     } catch (error) {
       // Log the error
