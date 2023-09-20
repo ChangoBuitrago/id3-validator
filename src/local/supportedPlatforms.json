@@ -1,0 +1,34 @@
+{
+  "supportedPlatforms": [
+    {
+      "name": "email",
+      "cTypeHash": "0x3291bb126e33b4862d421bfaa1d2f272e6cdfc4f96658988fbcffea8914bd9ac",
+      "contentsKey": "Email",
+      "linkTemplate": "mailto:CONTENTS_VALUE"
+    },
+    {
+      "name": "youtube",
+      "cTypeHash": "0x329a2a5861ea63c250763e5e4c4d4a18fe4470a31e541365c7fb831e5432b940",
+      "contentsKey": "Channel Name",
+      "linkTemplate": "https://www.youtube.com/CONTENTS_VALUE"
+    },
+    {
+      "name": "twitter",
+      "cTypeHash": "0x47d04c42bdf7fdd3fc5a194bcaa367b2f4766a6b16ae3df628927656d818f420",
+      "contentsKey": "Twitter",
+      "linkTemplate": "https://twitter.com/CONTENTS_VALUE"
+    },
+    {
+      "name": "instagram",
+      "cTypeHash": "0xa3cc696621b9fef5fc94a61078ceecadd957f18634ccff05b9030f274e376459",
+      "contentsKey": "Username",
+      "linkTemplate": "https://instagram.com/CONTENTS_VALUE"
+    },
+    {
+      "name": "github",
+      "cTypeHash": "0xad52bd7a8bd8a52e03181a99d2743e00d0a5e96fdc0182626655fcf0c0a776d0",
+      "contentsKey": "Username",
+      "linkTemplate": "https://github.com/CONTENTS_VALUE"
+    }
+  ]
+}
