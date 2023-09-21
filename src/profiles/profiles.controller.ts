@@ -1,20 +1,31 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
-  ApiBody,
+  ApiQuery,
   ApiResponse,
   ApiTags
 } from '@nestjs/swagger';
-import { VerifyProfileDto } from './dto/verify-profile.dto';
+import { ProfileDto } from './dto/profile.dto';
 import { Profile } from './entities/profile.entity';
 import { ProfilesService } from './profiles.service';
 
+/**
+ * Controller handling profile-related endpoints.
+ */
 @ApiBearerAuth()
 @ApiTags('profiles')
 @Controller('profiles')
 export class ProfilesController {
+  /**
+   * Constructor to create an instance of ProfilesController.
+   * @param profilesService The profiles service.
+   */
   constructor(private readonly profilesService: ProfilesService) {}
 
+  /**
+   * Endpoint for performing a health check.
+   * @returns {boolean} True if the health check is successful.
+   */
   @Get('healthCheck')
   @ApiResponse({
     status: 200,
@@ -25,16 +36,21 @@ export class ProfilesController {
     return this.profilesService.healthCheck();
   }
     
-  @Post('verifyProfile')
-  @ApiBody({ type: VerifyProfileDto })
+  /**
+   * Endpoint for retrieving a profile.
+   * @param {ProfileDto} profileDto - The profile DTO containing query parameters.
+   * @returns {Promise<Profile>} The profile information.
+   */
+  @Get('getProfile')
+  @ApiQuery({ type: ProfileDto })
   @ApiResponse({
     status: 200,
-    description: 'Result of profile verification',
+    description: 'Get profile',
     type: Profile,
   })
-  verifyProfile(
-    @Body() verifyProfileDto: VerifyProfileDto,
+  getProfile(
+    @Query() profileDto: ProfileDto,
   ): Promise<Profile> {
-    return this.profilesService.verifyProfile(verifyProfileDto);
+    return this.profilesService.getProfile(profileDto);
   }
 }

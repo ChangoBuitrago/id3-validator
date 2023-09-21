@@ -1,19 +1,13 @@
-/**
- * Import statements for the required modules.
- */
 import * as Kilt from '@kiltprotocol/sdk-js';
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import fetch from 'node-fetch';
-import { VerifyProfileDto } from './dto/verify-profile.dto';
+import { ProfileDto } from './dto/profile.dto';
 import { Profile } from './entities/profile.entity';
 import { supportedPlatforms } from '../local/supportedPlatforms.json'
 
 /**
- * Service for managing user profiles and credentials.
- *
- * This service provides methods for retrieving, verifying, and managing user credentials and profiles.
- * It also handles initialization and cleanup of resources during the lifecycle of the module.
+ * Service for managing profiles.
  */
 @Injectable()
 export class ProfilesService implements OnModuleInit, OnModuleDestroy {
@@ -199,11 +193,11 @@ export class ProfilesService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Verifies a user profile.
-   * @param {VerifyProfileDto} params - Object containing web3Name, username, and platformName.
-   * @returns {Promise<Profile>} - A promise that resolves to the verified profile.
+   * Get profile.
+   * @param {ProfileDto} profileDto - Object containing web3Name, username, and platformName.
+   * @returns {Promise<Profile>} - A promise that resolves to the profile.
    */
-  async verifyProfile({ web3Name, username, platformName }: VerifyProfileDto): Promise<Profile> {
+  async getProfile({ web3Name, username, platformName }: ProfileDto): Promise<Profile> {
     try {
       if (!web3Name || !username || !platformName) {
         throw new Error('Invalid parameters: web3Name, username, and platformName are required.')
@@ -287,6 +281,17 @@ export class ProfilesService implements OnModuleInit, OnModuleDestroy {
 
       // Extract and return the profile from verified credentials
       const profile: Profile = this.extractProfile(successfulVerifications)
+
+      // --- REMOVE AFTER SHOW AND TELL
+      const parameters = {
+        "web3Name": web3Name,
+        "username": username,
+        "platformName": platformName
+      }
+      this.logger.log(JSON.stringify(parameters, null, 2))
+      this.logger.log(JSON.stringify(profile, null, 2))
+      // --- REMOVE
+
       return profile
 
     } catch (error) {
