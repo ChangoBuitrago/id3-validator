@@ -1,7 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
-  ApiQuery,
   ApiResponse,
   ApiTags
 } from '@nestjs/swagger';
@@ -42,7 +41,6 @@ export class ProfilesController {
    * @returns {Promise<Profile>} The profile information.
    */
   @Get('getProfile')
-  @ApiQuery({ type: ProfileDto })
   @ApiResponse({
     status: 200,
     description: 'Get profile',

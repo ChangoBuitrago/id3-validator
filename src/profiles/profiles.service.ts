@@ -2,9 +2,9 @@ import * as Kilt from '@kiltprotocol/sdk-js';
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import fetch from 'node-fetch';
+import { supportedPlatforms } from '../local/supportedPlatforms.json';
 import { ProfileDto } from './dto/profile.dto';
 import { Profile } from './entities/profile.entity';
-import { supportedPlatforms } from '../local/supportedPlatforms.json'
 
 /**
  * Service for managing profiles.
